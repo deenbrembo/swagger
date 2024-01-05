@@ -176,7 +176,7 @@ async function run() {
  *     summary: Register a new security personnel
  *     description: Register a new security personnel with required details
  *     tags:
- *       - Security
+ *       - Admin
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -223,7 +223,7 @@ async function run() {
  *     summary: Register a new host
  *     description: Register a new host with required details
  *     tags:
- *       - Host
+ *       - Security
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -256,7 +256,7 @@ async function run() {
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
  */
-  app.post('/registerVisitor', verifyToken, async (req, res) => {
+  app.post('/registerHost', verifyToken, async (req, res) => {
     let data = req.user;
     let mydata = req.body;
     res.send(await register(client, data, mydata));
