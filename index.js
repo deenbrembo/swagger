@@ -510,9 +510,9 @@ async function register(client, data, mydata) {
   const hostCollection = client.db("assigment").collection("Host");
 
   const tempSecurity = await securityCollection.findOne({ username: mydata.username });
-  const tempUser = await hostCollection.findOne({ username: mydata.username });
+  const tempHost = await hostCollection.findOne({ username: mydata.username });
 
-  if (tempSecurity || tempUser) {
+  if (tempSecurity || tempHost) {
     return "Username already in use, please enter another username";
   }
 
