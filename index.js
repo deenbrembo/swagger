@@ -221,7 +221,7 @@ async function run() {
 
    /**
  * @swagger
- * /Issue Visitor Pass:
+ * /IssueVisitorPass:
  *   post:
  *     summary: Issue the visitor(give a security Token) for Visitor Pass(Token from visitor)
  *     description: Login with security personnel credentials
@@ -258,12 +258,12 @@ async function run() {
 
    /**
  * @swagger
- * /retrievePass:
+ * /RetrieveVisitorPass:
  *   post:
  *     summary: Retrieve the Visitor Pass(Token from security) to check in and check out
  *     description: Login with security personnel credentials
  *     tags:
- *       - Security
+ *       - Visitor
  *     requestBody:
  *       required: true
  *       content:
