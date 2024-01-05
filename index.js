@@ -219,9 +219,9 @@ async function run() {
 
   /**
  * @swagger
- * /Retrieve Visitor Pass:
+ * /loginVisitor:
  *   post:
- *     summary: Give the 
+ *     summary: Authenticate visitor
  *     description: Login for visitors
  *     tags:
  *       - Visitor
@@ -535,7 +535,7 @@ async function run() {
  *     summary: Retrive Visitor Pass from Security TO check in
  *     description: Perform check-in for a visitor with record ID and purpose by security personnel
  *     tags:
- *       - Visitor
+ *       - Security
  *     security:
  *       - bearerAuth: []  // Assuming security personnel token required
  *     requestBody:
@@ -583,14 +583,26 @@ async function run() {
 
 /**
  * @swagger
- * /checkOut (Retrieve Visitor Pass):
+ * /checkOut (Retrieve Visitor Pass)):
  *   post:
  *     summary: Retrieve Visitor Pass from Security TO check out
  *     description: Update check-out time for a visitor by security personnel
  *     tags:
- *       - Visitor
+ *       - Security
  *     security:
  *       - bearerAuth: []  // Assuming security personnel token required
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Username of the visitor to check out
+ *             required:
+ *               - username
  *     responses:
  *       '200':
  *         description: Check-out successful
