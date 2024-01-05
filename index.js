@@ -371,26 +371,32 @@ async function run() {
 
   
 
-  /**
+ /**
  * @swagger
- * /deleteHosts:
+ * /deleteHost&Security:
  *   delete:
- *     summary: Delete a host (Admin role)
- *     description: Delete a host by Admin role using the username
+ *     summary: Delete host or security user by Admin
+ *     description: Delete a host or security user by their role and username (Admin role required)
  *     tags:
  *       - Admin
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
+ *         name: role
+ *         required: true
+ *         description: Role of the user to delete (Host/Security)
+ *         schema:
+ *           type: string
+ *       - in: path
  *         name: username
  *         required: true
- *         description: Username of the host to delete
+ *         description: Username of the user to delete
  *         schema:
  *           type: string
  *     responses:
  *       '200':
- *         description: Host deleted successfully
+ *         description: User deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -398,19 +404,23 @@ async function run() {
  *               properties:
  *                 message:
  *                   type: string
+ *                   description: Deletion success message
  *       '401':
- *         description: Unauthorized or host not found
+ *         description: Unauthorized - Access denied
+ *       '404':
+ *         description: User not found
  *       '500':
  *         description: Internal Server Error
  */
-  app.delete('/deleteHosts', verifyToken, async (req, res) => {
+
+  app.delete('/deleteHost&Security', verifyToken, async (req, res) => {
     try {
       const data = req.user;
-      const usernameToDelete = req.params.username;
+      const { role, username } = req.params;
   
-      const deletionResult = await deleteHost(client, data, usernameToDelete);
+      const deletionResult = await deleteUserData(client, data, role, username);
   
-      if (deletionResult === 'Host deleted successfully') {
+      if (deletionResult === 'Host deleted successfully' || deletionResult === 'Security user deleted successfully') {
         return res.status(200).json({ message: deletionResult });
       } else {
         return res.status(401).json({ error: deletionResult });
@@ -420,7 +430,7 @@ async function run() {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   });
-
+  
 
   /**
  * @swagger
@@ -777,8 +787,8 @@ async function read(client, data) {
 }
 
 
-// Function to delete host data by Admin
-async function deleteHost(client, data, usernameToDelete) {
+// Function to delete host or security data by Admin
+async function deleteUserData(client, data, roleToDelete, usernameToDelete) {
   if (data.role !== 'Admin') {
     return 'Unauthorized access';
   }
@@ -786,26 +796,35 @@ async function deleteHost(client, data, usernameToDelete) {
   const hostCollection = client.db('assigment').collection('Host');
   const securityCollection = client.db('assigment').collection('Security');
 
-  // Find the host to be deleted
-  const hostToDelete = await hostCollection.findOne({ username: usernameToDelete });
-  if (!hostToDelete) {
-    return 'Host not found';
+  let deletionResult;
+  let collection;
+
+  // Determine the collection based on the role to delete
+  if (roleToDelete === 'Security') {
+    collection = securityCollection;
+    deletionResult = 'Security user deleted successfully';
+  } else if (roleToDelete === 'Host') {
+    collection = hostCollection;
+    deletionResult = 'Host deleted successfully';
+  } else {
+    return 'Invalid role to delete';
   }
 
-  // Delete the host document
-  const deleteResult = await hostCollection.deleteOne({ username: usernameToDelete });
+  // Find the user to be deleted
+  const userToDelete = await collection.findOne({ username: usernameToDelete });
+  if (!userToDelete) {
+    return 'User not found';
+  }
+
+  // Delete the user document
+  const deleteResult = await collection.deleteOne({ username: usernameToDelete });
   if (deleteResult.deletedCount === 0) {
-    return 'Failed to delete host';
+    return 'Failed to delete user';
   }
 
-  // Update references in other collections
-  await securityCollection.updateMany(
-    { host: usernameToDelete },
-    { $pull: { host: usernameToDelete } }
-  );
-
-  return 'Host deleted successfully';
+  return deletionResult;
 }
+
 
 
 function generatePassIdentifier() {
