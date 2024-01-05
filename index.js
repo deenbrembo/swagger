@@ -181,11 +181,47 @@ async function run() {
     res.send(await login(client, data));
   });
 
+   /**
+ * @swagger
+ * /Issue Visitor Pass:
+ *   post:
+ *     summary: Issue the visitor(give a security Token) for Visitor Pass(Token from visitor)
+ *     description: Login with security personnel credentials
+ *     tags:
+ *       - Security
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       '500':
+ *         description: Security personnel login successful
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *       '400':
+ *         description: Invalid request body
+ *       '401':
+ *         description: Unauthorized - Invalid credentials
+ */
+   app.post('/IssueVisitorPass', async (req, res) => {
+    let data = req.body;
+    res.send(await issuethepass(client, data));
+  });
+
   /**
  * @swagger
- * /loginVisitor:
+ * /Retrieve Visitor Pass:
  *   post:
- *     summary: Authenticate visitor
+ *     summary: Give the 
  *     description: Login for visitors
  *     tags:
  *       - Visitor
@@ -490,18 +526,18 @@ async function run() {
     res.send(await deleteUser(client, data));
   });
 
-  
-  
+
+ 
   /**
  * @swagger
- * /checkIn:
+ * /checkIn (Retrive Visitor Pass):
  *   post:
- *     summary: Check-in for a visitor
- *     description: Perform check-in for a visitor with record ID and purpose
+ *     summary: Retrive Visitor Pass from Security TO check in
+ *     description: Perform check-in for a visitor with record ID and purpose by security personnel
  *     tags:
  *       - Visitor
  *     security:
- *       - bearerAuth: []
+ *       - bearerAuth: []  // Assuming security personnel token required
  *     requestBody:
  *       required: true
  *       content:
@@ -525,28 +561,36 @@ async function run() {
  *           text/plain:
  *             schema:
  *               type: string
-*       '400':
+ *       '400':
  *         description: Invalid request body
  *       '401':
- *         description: Unauthorized - Token is missing or invalid
+ *         description: Unauthorized - Security token is missing or invalid
  */
   app.post('/checkIn', verifyToken, async (req, res) => {
-    let data = req.user;
-    let mydata = req.body;
-    res.send(await checkIn(client, data, mydata));
+    try {
+      const data = req.user; // Assuming the user's role is Visitor
+      const mydata = req.body;
+      const securityToken = req.headers.authorization; // Extract security token from header
+  
+      const checkInResponse = await checkInBySecurity(client, securityToken, data.username, mydata.recordID, mydata.purpose);
+      res.send(checkInResponse);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Error during check-in');
+    }
   });
 
-  
-  /**
+
+/**
  * @swagger
- * /checkOut:
+ * /checkOut (Retrieve Visitor Pass):
  *   post:
- *     summary: Perform check-out for a visitor
- *     description: Update check-out time for a visitor
+ *     summary: Retrieve Visitor Pass from Security TO check out
+ *     description: Update check-out time for a visitor by security personnel
  *     tags:
  *       - Visitor
  *     security:
- *       - bearerAuth: []
+ *       - bearerAuth: []  // Assuming security personnel token required
  *     responses:
  *       '200':
  *         description: Check-out successful
@@ -555,12 +599,20 @@ async function run() {
  *             schema:
  *               type: string
  *       '401':
- *         description: Unauthorized - Token is missing or invalid
+ *         description: Unauthorized - Security token is missing or invalid
  */
-  app.post('/checkOut', verifyToken, async (req, res) => {
-    let data = req.user;
-    res.send(await checkOut(client, data));
-  });
+app.post('/checkOut', verifyToken, async (req, res) => {
+  try {
+    const data = req.user; // Assuming the user's role is Visitor
+    const securityToken = req.headers.authorization; // Extract security token from header
+
+    const checkOutResponse = await checkOutBySecurity(client, securityToken, data.username);
+    res.send(checkOutResponse);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error during check-out');
+  }
+});
 }
 
 run().catch(console.error);
@@ -619,9 +671,43 @@ async function login(client, data) {
         case "Admin":
           return "You are logged in as Admin\n1) Register Security\n2) Read all data\n\nToken for " + match.name + ": " + token + "\n";
         case "Security":
-          return "You are logged in as Security\n1) register Visitor\n2) read security and visitor data\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as Security\n1) register Visitor\n2) read security and visitor data\n3) Issue Visitor Pass\n\nToken for " + match.name + ": " + token + "\n";
         case "Visitor":
           return "You are logged in as a regular visitor User\n1) check in\n2) check out\n3) read visitor data\n4) update profile\n5) delete account\n\nToken for " + match.name + ": " + token + "\n";
+        default:
+          return "Role not defined";
+      }
+    }
+     else {
+      return "Wrong password";
+    }
+  } else {
+    return "User not found";
+  }
+}
+
+async function issuethepass(client, data) {
+
+  const securityCollection = client.db("swagger").collection("Security");
+
+  if (!match) {
+    // Find the security user
+    match = await securityCollection.findOne({ username: data.username });
+  }
+
+
+  if (match) {
+    // Compare the provided password with the stored password
+    const isPasswordMatch = await decryptPassword(data.password, match.password);
+
+
+    if (isPasswordMatch) {
+      console.clear(); // Clear the console
+      const token = generateToken(match);
+
+      switch (match.role) {
+        case "Security":
+          return "Pass from " + match.name + ": " + token + "\n";
         default:
           return "Role not defined";
       }
@@ -796,91 +882,105 @@ async function deleteUser(client, data) {
 
 
 
-//Function to check in
-async function checkIn(client, data, mydata) {
-  const usersCollection = client.db('swagger').collection('Users');
-  const recordsCollection = client.db('swagger').collection('Records');
-
-  const currentUser = await usersCollection.findOne({ username: data.username });
-
-  if (!currentUser) {
-    return 'User not found';
-  }
-
-  if (currentUser.currentCheckIn) {
-    return 'Already checked in, please check out first!!!';
-  }
-
-  if (data.role !== 'Visitor') {
-    return 'Only visitors can access check-in.';
-  }
-
-  const existingRecord = await recordsCollection.findOne({ recordID: mydata.recordID });
-
-  if (existingRecord) {
-    return `The recordID '${mydata.recordID}' is already in use. Please enter another recordID.`;
-  }
-
-  const currentCheckInTime = new Date();
-
-  const recordData = {
-    username: data.username,
-    recordID: mydata.recordID,
-    purpose: mydata.purpose,
-    checkInTime: currentCheckInTime
-  };
-
-  await recordsCollection.insertOne(recordData);
-
-  await usersCollection.updateOne(
-    { username: data.username },
-    {
-      $set: { currentCheckIn: mydata.recordID },
-      $push: { records: mydata.recordID }
+// Function to handle check-in by security
+async function checkInBySecurity(client, securityToken, visitorUsername, recordID, purpose) {
+  try {
+    const decodedSecurity = jwt.verify(securityToken, 'dinpassword');
+    if (decodedSecurity.role !== 'Security') {
+      return 'Unauthorized: Invalid security token';
     }
-  );
 
-  return `You have checked in at '${currentCheckInTime}' with recordID '${mydata.recordID}'`;
+    // Check-in logic here
+    const usersCollection = client.db('swagger').collection('Users');
+    const recordsCollection = client.db('swagger').collection('Records');
+
+    const visitor = await usersCollection.findOne({ username: visitorUsername });
+    if (!visitor || visitor.role !== 'Visitor') {
+      return 'Visitor not found or invalid';
+    }
+
+    if (visitor.currentCheckIn) {
+      return 'Visitor is already checked in';
+    }
+
+    const existingRecord = await recordsCollection.findOne({ recordID });
+    if (existingRecord) {
+      return `Record ID '${recordID}' already exists, please choose another`;
+    }
+
+    const checkInTime = new Date();
+
+    const recordData = {
+      username: visitorUsername,
+      recordID,
+      purpose,
+      checkInTime,
+      securityPersonnel: decodedSecurity.username // Optionally record who checked the visitor in
+    };
+
+    await recordsCollection.insertOne(recordData);
+
+    await usersCollection.updateOne(
+      { username: visitorUsername },
+      {
+        $set: { currentCheckIn: recordID },
+        $push: { records: recordID }
+      }
+    );
+
+    return `Visitor '${visitorUsername}' checked in successfully at '${checkInTime}' with record ID '${recordID}'`;
+  } catch (error) {
+    console.error(error);
+    return 'Error while processing check-in';
+  }
 }
 
+// Function to handle check-out by security
+async function checkOutBySecurity(client, securityToken, visitorUsername) {
+  try {
+    const decodedSecurity = jwt.verify(securityToken, 'dinpassword');
+    if (decodedSecurity.role !== 'Security') {
+      return 'Unauthorized: Invalid security token';
+    }
 
+    // Check-out logic here
+    const usersCollection = client.db('swagger').collection('Users');
+    const recordsCollection = client.db('swagger').collection('Records');
 
-//Function to check out
-async function checkOut(client, data) {
-  const usersCollection = client.db('swagger').collection('Users');
-  const recordsCollection = client.db('swagger').collection('Records');
+    const visitor = await usersCollection.findOne({ username: visitorUsername });
+    if (!visitor || visitor.role !== 'Visitor') {
+      return 'Visitor not found or invalid';
+    }
 
-  const currentUser = await usersCollection.findOne({ username: data.username });
+    if (!visitor.currentCheckIn) {
+      return 'Visitor is not checked in';
+    }
 
-  if (!currentUser) {
-    return 'User not found';
+    const checkOutTime = new Date();
+
+    const updateResult = await recordsCollection.updateOne(
+      { recordID: visitor.currentCheckIn },
+      { $set: { checkOutTime } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return 'Failed to update check-out time';
+    }
+
+    const unsetResult = await usersCollection.updateOne(
+      { username: visitorUsername },
+      { $unset: { currentCheckIn: 1 } }
+    );
+
+    if (unsetResult.modifiedCount === 0) {
+      return 'Failed to check out';
+    }
+
+    return `Visitor '${visitorUsername}' checked out successfully at '${checkOutTime}'`;
+  } catch (error) {
+    console.error(error);
+    return 'Error while processing check-out';
   }
-
-  if (!currentUser.currentCheckIn) {
-    return 'You have not checked in yet, please check in first!!!';
-  }
-
-  const checkOutTime = new Date();
-
-  const updateResult = await recordsCollection.updateOne(
-    { recordID: currentUser.currentCheckIn },
-    { $set: { checkOutTime: checkOutTime } }
-  );
-
-  if (updateResult.modifiedCount === 0) {
-    return 'Failed to update check-out time. Please try again.';
-  }
-
-  const unsetResult = await usersCollection.updateOne(
-    { username: currentUser.username },
-    { $unset: { currentCheckIn: 1 } }
-  );
-
-  if (unsetResult.modifiedCount === 0) {
-    return 'Failed to check out. Please try again.';
-  }
-
-  return `You have checked out at '${checkOutTime}' with recordID '${currentUser.currentCheckIn}'`;
 }
 
 
