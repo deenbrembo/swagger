@@ -59,7 +59,56 @@ async function run() {
   });
 
   
-  
+  /**
+ * @swagger
+ * /registerAdmin:
+ *   post:
+ *     summary: Register a new admin
+ *     description: Register a new admin user with required details
+ *     tags:
+ *       - Admin
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phoneNumber:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [Admin]
+ *             required:
+ *               - username
+ *               - password
+ *               - name
+ *               - email
+ *               - phoneNumber
+ *               - role
+ *     responses:
+ *       '200':
+ *         description: Admin registration successful
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *       '400':
+ *         description: Invalid request body
+ */
+  app.post('/registerAdmin', async (req, res) => {
+    let data = req.body;
+    res.send(await registerAdmin(client, data));
+  }); 
 
   /**
  * @swagger
@@ -267,8 +316,8 @@ async function run() {
  * @swagger
  * /readVisitor:
  *   get:
- *     summary: Read host and visitor information
- *     description: Retrieve information for a host and visitor
+ *     summary: Read visitor information
+ *     description: Retrieve information for visitor
  *     tags:
  *       - Host
  *     security:
@@ -286,6 +335,32 @@ async function run() {
   app.get('/readVisitor', verifyToken, async (req, res) => {
     let data = req.user;
     res.send(await read(client, data));
+  });
+
+
+   /**
+ * @swagger
+ * /readHosts:
+ *   get:
+ *     summary: Read Hosts information
+ *     description: Retrieve information for a host 
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '500':
+ *         description: Hosts information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HostInfo'
+ *       '401':
+ *         description: Unauthorized - Token is missing or invalid
+ */
+   app.get('/readHost', verifyToken, async (req, res) => {
+    let data = req.user;
+    res.send(await readHosts(client, data));
   });
 
 
@@ -432,6 +507,20 @@ function generateToken(userProfile){
 }
 
 
+//Function to register admin
+async function registerAdmin(client, data) {
+  data.password = await encryptPassword(data.password);
+  
+  const existingUser = await client.db("assigment").collection("Admin").findOne({ username: data.username });
+  if (existingUser) {
+    return 'Username already registered';
+  } else {
+    const result = await client.db("assigment").collection("Admin").insertOne(data);
+    return 'Admin registered';
+  }
+}
+
+
 //Function to login
 async function login(client, data) {
   const adminCollection = client.db("assigment").collection("Admin");
@@ -556,7 +645,15 @@ async function register(client, data, mydata) {
   }
 }
 
-
+// Function to read host data only by Admin role
+async function readHosts(client, data) {
+  if (data.role === 'Admin') {
+    const hosts = await client.db('assigment').collection('Host').find({}).toArray();
+    return hosts;
+  } else {
+    return 'Unauthorized access';
+  }
+}
 
 //Function to read data
 async function read(client, data) {
