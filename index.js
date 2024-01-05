@@ -258,14 +258,12 @@ async function run() {
 
    /**
  * @swagger
- * /RetrievePass:
+ * /RetrieveVisitorPass:
  *   post:
- *     summary: Retrieve pass for Check In and Check Out.
- *     description: Retrieve pass for a visitor from Security token for Check In and Check Out.
+ *     summary: Retrieve the Visitor Pass(Token from security) to check in and check out
+ *     description: Login with security personnel credentials
  *     tags:
- *       - Pass Retrieval
- *     security:
- *       - BearerAuth: []
+ *       - Visitor
  *     requestBody:
  *       required: true
  *       content:
@@ -273,48 +271,21 @@ async function run() {
  *           schema:
  *             type: object
  *             properties:
- *               visitorUsername:
+ *               Visitorusername:
  *                 type: string
- *                 description: Username of the visitor.
- *                 example: visitor123
- *               visitorPassword:
+ *               Visitorpassword:
  *                 type: string
- *                 description: Password of the visitor.
- *                 example: pass123
  *     responses:
- *       '200':
- *         description: Pass retrieval successful.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Message indicating pass retrieval success.
- *                   example: Retrieve the pass for Check In and Check Out.
- *       '401':
- *         description: Unauthorized access.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   description: Error message for unauthorized access.
- *                   example: Unauthorized
  *       '500':
- *         description: Internal server error.
+ *         description: Security personnel login successful
  *         content:
- *           application/json:
+ *           text/plain:
  *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   description: Error message for internal server error.
- *                   example: Internal server error occurred.
+ *               type: string
+ *       '400':
+ *         description: Invalid request body
+ *       '401':
+ *         description: Unauthorized - Invalid credentials
  */
 app.post('/RetrievePass', verifyToken, async (req, res) => {
   try {
