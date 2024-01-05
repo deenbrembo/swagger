@@ -371,14 +371,14 @@ async function run() {
         passIdentifier: passIdentifier, // Include the PassIdentifier in the record
       });
   
-      if (result.insertedCount === 1) {
-        return res.status(500).send('Visitor pass issued successfully. PassIdentifier: ' + passIdentifier);
+      if (result.insertedCount) {
+        return res.status(200).send('Visitor pass issued successfully. PassIdentifier: ' + passIdentifier);
       } else {
-        return res.status(200).send('Failed to issue visitor pass');
+        return res.status(500).send('Failed to issue visitor pass');
       }
     } catch (error) {
       console.error(error);
-      return res.status(200).send('Internal Server Error');
+      return res.status(500).send('Internal Server Error');
     }
   });
   
