@@ -258,12 +258,14 @@ async function run() {
 
    /**
  * @swagger
- * /RetrieveVisitorPass:
+ * /RetrievePass:
  *   post:
- *     summary: Retrieve the Visitor Pass(Token from security) to check in and check out
- *     description: Login with security personnel credentials
+ *     summary: Retrieve pass for Check In and Check Out.
+ *     description: Retrieve pass for a visitor from Security token for Check In and Check Out.
  *     tags:
- *       - Visitor
+ *       - Pass Retrieval
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -271,21 +273,48 @@ async function run() {
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               visitorUsername:
  *                 type: string
- *               password:
+ *                 description: Username of the visitor.
+ *                 example: visitor123
+ *               visitorPassword:
  *                 type: string
+ *                 description: Password of the visitor.
+ *                 example: pass123
  *     responses:
- *       '500':
- *         description: Security personnel login successful
+ *       '200':
+ *         description: Pass retrieval successful.
  *         content:
- *           text/plain:
+ *           application/json:
  *             schema:
- *               type: string
- *       '400':
- *         description: Invalid request body
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Message indicating pass retrieval success.
+ *                   example: Retrieve the pass for Check In and Check Out.
  *       '401':
- *         description: Unauthorized - Invalid credentials
+ *         description: Unauthorized access.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message for unauthorized access.
+ *                   example: Unauthorized
+ *       '500':
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message for internal server error.
+ *                   example: Internal server error occurred.
  */
 app.post('/RetrievePass', verifyToken, async (req, res) => {
   try {
