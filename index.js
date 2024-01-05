@@ -373,7 +373,7 @@ async function run() {
 
   /**
  * @swagger
- * /deleteHost/{username}:
+ * /deleteHost:
  *   delete:
  *     summary: Delete a host (Admin role)
  *     description: Delete a host by Admin role using the username
@@ -403,7 +403,7 @@ async function run() {
  *       '500':
  *         description: Internal Server Error
  */
-  app.delete('/hosts/:username', verifyToken, async (req, res) => {
+  app.delete('/deleteHost', verifyToken, async (req, res) => {
     try {
       const data = req.user;
       const username = req.params.username;
