@@ -276,7 +276,7 @@ async function run() {
 
   /**
  * @swagger
- * /loginSecurity:
+ * /loginVisitor:
  *   post:
  *     summary: Authenticate security personnel 
  *     description: Login for visitors
