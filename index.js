@@ -569,7 +569,7 @@ async function read(client, data) {
     // Fetch all records data only when the user is a Host
     const Records = await client.db('assigment').collection('Records').find({}).toArray();
 
-    return { Host, Records };
+    return Records;//only return records
   } else {
     return 'Unauthorized access';
   }
