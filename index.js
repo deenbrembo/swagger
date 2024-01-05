@@ -561,6 +561,116 @@ async function run() {
     let data = req.user;
     res.send(await checkOut(client, data));
   });
+
+  /**
+ * @swagger
+ * /issuePass:
+ *   post:
+ *     summary: Issue a visitor pass
+ *     description: Issue a visitor pass for a registered visitor
+ *     tags:
+ *       - Security
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               visitorUsername:
+ *                 type: string
+ *               purpose:
+ *                 type: string
+ *             required:
+ *               - visitorUsername
+ *               - purpose
+ *     responses:
+ *       '200':
+ *         description: Visitor pass issued successfully
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *       '400':
+ *         description: Invalid request body
+ *       '401':
+ *         description: Unauthorized - Token is missing or invalid
+ */
+app.post('/issuePass', verifyToken, async (req, res) => {
+  const securityData = req.user;
+  const passData = req.body;
+
+  // Check if the user is authenticated as security
+  if (securityData.role !== 'Security') {
+    return res.status(401).send('Unauthorized access');
+  }
+
+  // Check if visitorUsername exists and is a valid registered visitor
+  const visitor = await client.db("assigment").collection("Users").findOne({ username: passData.visitorUsername, role: 'Visitor' });
+  if (!visitor) {
+    return res.status(400).send('Invalid visitor');
+  }
+
+  // Perform the operation to issue a pass or record it in the database
+  // You can insert this pass issuance into your database logic and modify as per your system design
+
+  // For example, if you have a 'Passes' collection:
+  const passesCollection = client.db("assigment").collection("Passes");
+  const passIssued = {
+    issuedBy: securityData.username,
+    issuedTo: passData.visitorUsername,
+    purpose: passData.purpose,
+    issuedAt: new Date()
+  };
+
+  await passesCollection.insertOne(passIssued);
+
+  return res.status(200).send('Visitor pass issued successfully');
+});
+
+
+/**
+ * @swagger
+ * /retrievePass:
+ *   get:
+ *     summary: Retrieve visitor pass information
+ *     description: Retrieve the pass information for the authenticated visitor
+ *     tags:
+ *       - Visitor
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '200':
+ *         description: Visitor pass information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PassInfo'
+ *       '401':
+ *         description: Unauthorized - Token is missing or invalid
+ */
+app.get('/retrievePass', verifyToken, async (req, res) => {
+  const userData = req.user;
+
+  // Check if the user is authenticated as a visitor
+  if (userData.role !== 'Visitor') {
+    return res.status(401).send('Unauthorized access');
+  }
+
+  // Find and return the pass information for the authenticated visitor from the database
+  const passesCollection = client.db("assigment").collection("Passes");
+  const visitorPass = await passesCollection.findOne({ issuedTo: userData.username });
+
+  if (!visitorPass) {
+    return res.status(404).send('Pass information not found');
+  }
+
+  return res.status(200).json(visitorPass);
+});
+
+
 }
 
 run().catch(console.error);
