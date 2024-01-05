@@ -273,9 +273,9 @@ async function run() {
  *           schema:
  *             type: object
  *             properties:
- *               Visitorusername:
+ *               username:
  *                 type: string
- *               Visitorpassword:
+ *               password:
  *                 type: string
  *     responses:
  *       '500':
