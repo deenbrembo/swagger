@@ -12,7 +12,7 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'VMS API',
+            title: 'Welcome To Group 1 Visitor Management System',
             version: '1.0.0'
         },
         components: {  // Add 'components' section
@@ -355,30 +355,21 @@ async function run() {
       const data = req.user;
   
       if (data.role !== 'Host') {
-        return res.status(401).send('Unauthorized - Host access only');
+        return res.status(401).json({ error: 'Unauthorized - Host access only' });
       }
   
       const { newName, newPhoneNumber } = req.body;
   
-      // Generate a unique PassIdentifier (e.g., using UUID or any unique identifier method)
-      const passIdentifier = generatePassIdentifier(); // You need to implement this function
+      const passIssueResult = await issueVisitorPass(data, newName, newPhoneNumber, client);
   
-      const result = await client.db('assigment').collection('Records').insertOne({
-        name: newName,
-        phoneNumber: newPhoneNumber,
-        hostUsername: data.username,
-        issueDate: new Date(),
-        passIdentifier: passIdentifier, // Include the PassIdentifier in the record
-      });
-  
-      if (!result) {
-        return 'Failed to issue visitor pass';
+      if (passIssueResult.success) {
+        return res.status(200).json({ message: 'Visitor pass issued successfully', passIdentifier: passIssueResult.passIdentifier });
       } else {
-        return 'Visitor pass issued successfully. PassIdentifier: ' + passIdentifier;
+        return res.status(500).json({ error: 'Failed to issue visitor pass' });
       }
     } catch (error) {
       console.error(error);
-      return res.status(500).send('Internal Server Error');
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   });
   
@@ -488,7 +479,24 @@ async function login(client, data) {
   }
 }
 
+// Function to issue a visitor pass
+async function issueVisitorPass(userData, newName, newPhoneNumber, dbClient) {
+  const passIdentifier = generatePassIdentifier(); // Implement this function
 
+  const result = await dbClient.db('assigment').collection('Records').insertOne({
+    name: newName,
+    phoneNumber: newPhoneNumber,
+    hostUsername: userData.username,
+    issueDate: new Date(),
+    passIdentifier: passIdentifier,
+  });
+
+  if (result.insertedId) {
+    return { success: true, passIdentifier };
+  } else {
+    return { success: false };
+  }
+}
 
 //Function to encrypt password
 async function encryptPassword(password) {
