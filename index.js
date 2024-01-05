@@ -567,7 +567,7 @@ async function run() {
  * /issuePass:
  *   post:
  *     summary: Issue a visitor pass
- *     description: Issue a new visitor pass with a valid token obtained from the loginSecurity endpoint
+ *     description: Issue a visitor pass with required details
  *     tags:
  *       - Security
  *     security:
@@ -581,56 +581,59 @@ async function run() {
  *             properties:
  *               visitorUsername:
  *                 type: string
- *                 description: The username of the visitor for whom the pass is issued
  *               passDetails:
  *                 type: string
- *                 description: Additional details for the pass (optional)
  *             required:
  *               - visitorUsername
  *     responses:
  *       '200':
- *         description: Visitor pass issued successfully, returns a unique pass identifier
+ *         description: Visitor pass issued successfully
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
- *       '404':
- *         description: Visitor not found
  */
- app.post('/issuePass', verifyToken, async (req, res) => {
+app.post('/issuePass', verifyToken, async (req, res) => {
   let data = req.user;
   let passData = req.body;
   res.send(await issuePass(client, data, passData));
 });
 
+
 /**
-* @swagger
-* /retrievePass/{passIdentifier}:
-*   get:
-*     summary: Retrieve visitor pass details
-*     description: Retrieve pass details for a visitor using the pass identifier
-*     tags:
-*       - Visitor
-*     security:
-*       - bearerAuth: []
-*     parameters:
-*       - in: path
-*         name: passIdentifier
-*         required: true
-*         description: The unique pass identifier
-*         schema:
-*           type: string
-*     responses:
-*       '200':
-*         description: Visitor pass details retrieved successfully
-*       '401':
-*         description: Unauthorized - Token is missing or invalid
-*       '404':
-*         description: Pass not found or unauthorized to retrieve
-*/
+ * @swagger
+ * /retrievePass/{passIdentifier}:
+ *   get:
+ *     summary: Retrieve pass details
+ *     description: Retrieve details for a visitor pass using its identifier
+ *     tags:
+ *       - Security
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: passIdentifier
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Pass details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PassDetails'
+ *       '401':
+ *         description: Unauthorized - Token is missing or invalid
+ */
 app.get('/retrievePass/:passIdentifier', verifyToken, async (req, res) => {
   let data = req.user;
   let passIdentifier = req.params.passIdentifier;
   res.send(await retrievePass(client, data, passIdentifier));
 });
+
   
 
 }
