@@ -5,8 +5,8 @@ const bcrypt = require('bcrypt');
 
 const app = express();
 const port = process.env.PORT || 3000;
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
+const assigmentUi = require('assigment-ui-express');
+const assigmentJsdoc = require('assigment-jsdoc');
 
 const options = {
     definition: {
@@ -28,8 +28,8 @@ const options = {
     apis: ['./index.js'],
 };
 
-const swaggerSpec = swaggerJsdoc(options);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const assigmentSpec = assigmentJsdoc(options);
+app.use('/api-docs', assigmentUi.serve, assigmentUi.setup(assigmentSpec));
 const saltRounds = 10;
 const uri = "mongodb+srv://deenbrembo:hafizudin202@cluster0.vlncwtu.mongodb.net/";
 
@@ -59,7 +59,7 @@ async function run() {
 
   
   /**
- * @swagger
+ * @assigment
  * /registerAdmin:
  *   post:
  *     summary: Register a new admin
@@ -110,7 +110,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /loginAdmin:
  *   post:
  *     summary: Authenticate admin
@@ -146,7 +146,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /loginSecurity:
  *   post:
  *     summary: Authenticate security personnel
@@ -182,7 +182,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /loginVisitor:
  *   post:
  *     summary: Authenticate visitor
@@ -218,7 +218,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /registerSecurity:
  *   post:
  *     summary: Register a new security personnel
@@ -269,7 +269,7 @@ async function run() {
 
   
   /**
- * @swagger
+ * @assigment
  * /registerVisitor:
  *   post:
  *     summary: Register a new visitor
@@ -328,7 +328,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /readAdmin:
  *   get:
  *     summary: Read admin information
@@ -354,7 +354,7 @@ async function run() {
 
   
   /**
- * @swagger
+ * @assigment
  * /readSecurity:
  *   get:
  *     summary: Read security personnel information
@@ -380,7 +380,7 @@ async function run() {
 
   
   /**
- * @swagger
+ * @assigment
  * /readVisitor:
  *   get:
  *     summary: Read visitor information
@@ -408,7 +408,7 @@ async function run() {
 
  
   /**
- * @swagger
+ * @assigment
  * /updateVisitor:
  *   patch:
  *     summary: Update visitor information
@@ -466,7 +466,7 @@ async function run() {
   });
 
   /**
- * @swagger
+ * @assigment
  * /deleteVisitor:
  *   delete:
  *     summary: Delete visitor account
@@ -493,7 +493,7 @@ async function run() {
   
   
   /**
- * @swagger
+ * @assigment
  * /checkIn:
  *   post:
  *     summary: Check-in for a visitor
@@ -538,7 +538,7 @@ async function run() {
 
   
   /**
- * @swagger
+ * @assigment
  * /checkOut:
  *   post:
  *     summary: Perform check-out for a visitor
@@ -563,7 +563,7 @@ async function run() {
   });
 
  /**
- * @swagger
+ * @assigment
  * /issuePass:
  *   post:
  *     summary: Issue a visitor pass
@@ -603,7 +603,7 @@ app.post('/issuePass', verifyToken, async (req, res) => {
 
 
 /**
- * @swagger
+ * @assigment
  * /retrievePass/{passIdentifier}:
  *   get:
  *     summary: Retrieve pass details
@@ -652,11 +652,11 @@ function generateToken(userProfile){
 async function registerAdmin(client, data) {
   data.password = await encryptPassword(data.password);
   
-  const existingUser = await client.db("swagger").collection("Admin").findOne({ username: data.username });
+  const existingUser = await client.db("assigment").collection("Admin").findOne({ username: data.username });
   if (existingUser) {
     return 'Username already registered';
   } else {
-    const result = await client.db("swagger").collection("Admin").insertOne(data);
+    const result = await client.db("assigment").collection("Admin").insertOne(data);
     return 'Admin registered';
   }
 }
@@ -664,9 +664,9 @@ async function registerAdmin(client, data) {
 
 //Function to login
 async function login(client, data) {
-  const adminCollection = client.db("swagger").collection("Admin");
-  const securityCollection = client.db("swagger").collection("Security");
-  const usersCollection = client.db("swagger").collection("Users");
+  const adminCollection = client.db("assigment").collection("Admin");
+  const securityCollection = client.db("assigment").collection("Security");
+  const usersCollection = client.db("assigment").collection("Users");
 
   // Find the admin user
   let match = await adminCollection.findOne({ username: data.username });
@@ -727,9 +727,9 @@ async function decryptPassword(password, compare) {
 
 //Function to register security and visitor
 async function register(client, data, mydata) {
-  const adminCollection = client.db("swagger").collection("Admin");
-  const securityCollection = client.db("swagger").collection("Security");
-  const usersCollection = client.db("swagger").collection("Users");
+  const adminCollection = client.db("assigment").collection("Admin");
+  const securityCollection = client.db("assigment").collection("Security");
+  const usersCollection = client.db("assigment").collection("Users");
 
   const tempAdmin = await adminCollection.findOne({ username: mydata.username });
   const tempSecurity = await securityCollection.findOne({ username: mydata.username });
@@ -785,33 +785,33 @@ async function register(client, data, mydata) {
 //Function to read data
 async function read(client, data) {
   if (data.role == 'Admin') {
-    const Admins = await client.db('swagger').collection('Admin').find({ role: 'Admin' }).next();
-    const Securitys = await client.db('swagger').collection('Security').find({ role: 'Security' }).toArray();
-    const Visitors = await client.db('swagger').collection('Users').find({ role: 'Visitor' }).toArray();
-    const Records = await client.db('swagger').collection('Records').find().toArray();
+    const Admins = await client.db('assigment').collection('Admin').find({ role: 'Admin' }).next();
+    const Securitys = await client.db('assigment').collection('Security').find({ role: 'Security' }).toArray();
+    const Visitors = await client.db('assigment').collection('Users').find({ role: 'Visitor' }).toArray();
+    const Records = await client.db('assigment').collection('Records').find().toArray();
 
     return { Admins, Securitys, Visitors, Records };
   }
 
   if (data.role == 'Security' ) {
-    const Security = await client.db('swagger').collection('Security').findOne({ username: data.username });
+    const Security = await client.db('assigment').collection('Security').findOne({ username: data.username });
     if (!Security) {
       return 'User not found';
     }
 
-    const Visitors = await client.db('swagger').collection('Users').find({ Security: data.username }).toArray();
-    const Records = await client.db('swagger').collection('Records').find().toArray();
+    const Visitors = await client.db('assigment').collection('Users').find({ Security: data.username }).toArray();
+    const Records = await client.db('assigment').collection('Records').find().toArray();
 
     return { Security, Visitors, Records };
   }
 
   if (data.role == 'Visitor') {
-    const Visitor = await client.db('swagger').collection('Users').findOne({ username: data.username });
+    const Visitor = await client.db('assigment').collection('Users').findOne({ username: data.username });
     if (!Visitor) {
       return 'User not found';
     }
 
-    const Records = await client.db('swagger').collection('Records').find({ recordID: { $in: Visitor.records } }).toArray();
+    const Records = await client.db('assigment').collection('Records').find({ recordID: { $in: Visitor.records } }).toArray();
 
     return { Visitor, Records };
   }
@@ -820,7 +820,7 @@ async function read(client, data) {
 
 //Function to update data
 async function update(client, data, mydata) {
-  const usersCollection = client.db("swagger").collection("Users");
+  const usersCollection = client.db("assigment").collection("Users");
 
   if (mydata.password) {
     mydata.password = await encryptPassword(mydata.password);
@@ -841,9 +841,9 @@ async function update(client, data, mydata) {
 
 //Function to delete data
 async function deleteUser(client, data) {
-  const usersCollection = client.db("swagger").collection("Users");
-  const recordsCollection = client.db("swagger").collection("Records");
-  const securityCollection = client.db("swagger").collection("Security");
+  const usersCollection = client.db("assigment").collection("Users");
+  const recordsCollection = client.db("assigment").collection("Records");
+  const securityCollection = client.db("assigment").collection("Security");
 
   // Delete user document
   const deleteResult = await usersCollection.deleteOne({ username: data.username });
@@ -873,8 +873,8 @@ async function deleteUser(client, data) {
 
 //Function to check in
 async function checkIn(client, data, mydata) {
-  const usersCollection = client.db('swagger').collection('Users');
-  const recordsCollection = client.db('swagger').collection('Records');
+  const usersCollection = client.db('assigment').collection('Users');
+  const recordsCollection = client.db('assigment').collection('Records');
 
   const currentUser = await usersCollection.findOne({ username: data.username });
 
@@ -922,8 +922,8 @@ async function checkIn(client, data, mydata) {
 
 //Function to check out
 async function checkOut(client, data) {
-  const usersCollection = client.db('swagger').collection('Users');
-  const recordsCollection = client.db('swagger').collection('Records');
+  const usersCollection = client.db('assigment').collection('Users');
+  const recordsCollection = client.db('assigment').collection('Records');
 
   const currentUser = await usersCollection.findOne({ username: data.username });
 
@@ -960,8 +960,8 @@ async function checkOut(client, data) {
 
 // Function to issue a pass
 async function issuePass(client, data, passData) {
-  const usersCollection = client.db('swagger').collection('Users');
-  const securityCollection = client.db('swagger').collection('Security');
+  const usersCollection = client.db('assigment').collection('Users');
+  const securityCollection = client.db('assigment').collection('Security');
 
   // Check if the security user has the authority to issue passes
   if (data.role !== 'Security') {
@@ -990,7 +990,7 @@ async function issuePass(client, data, passData) {
   };
 
   // Insert the pass record into the Passes collection
-  await client.db('swagger').collection('Passes').insertOne(passRecord);
+  await client.db('assigment').collection('Passes').insertOne(passRecord);
 
   // Update the visitor's information (you might want to store pass details in the visitor document)
   await usersCollection.updateOne(
@@ -1003,8 +1003,8 @@ async function issuePass(client, data, passData) {
 
 // Function to retrieve pass details
 async function retrievePass(client, data, passIdentifier) {
-  const passesCollection = client.db('swagger').collection('Passes');
-  const securityCollection = client.db('swagger').collection('Security');
+  const passesCollection = client.db('assigment').collection('Passes');
+  const securityCollection = client.db('assigment').collection('Security');
 
   // Check if the security user has the authority to retrieve pass details
   if (data.role !== 'Security') {
