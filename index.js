@@ -526,6 +526,77 @@ app.get('/retrievePass', async (req, res) => {
 });
 
 
+
+/**
+ * @swagger
+ * /visitorPass/{passIdentifier}:
+ *   get:
+ *     summary: Retrieve host contact from visitor pass (Security role)
+ *     description: Get the contact number of the host from the visitor pass using passIdentifier
+ *     tags:
+ *       - Security
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: passIdentifier
+ *         required: true
+ *         description: Unique identifier of the visitor pass
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Host contact retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 name:
+ *                   type: string
+ *                   description: Host's name
+ *                 phoneNumber:
+ *                   type: string
+ *                   description: Host's phone number
+ *       '401':
+ *         description: Unauthorized - Access denied
+ *       '404':
+ *         description: Visitor pass not found
+ *       '500':
+ *         description: Internal Server Error
+ */
+
+app.get('/visitorPass/:passIdentifier', verifyToken, async (req, res) => {
+  try {
+    const data = req.user;
+    const passIdentifier = req.params.passIdentifier;
+
+    // Check if the user has the 'Security' role
+    if (data.role !== 'Security') {
+      return res.status(401).json({ error: 'Unauthorized access' });
+    }
+
+    // Query the database using passIdentifier to retrieve host contact info from the visitor pass
+    const visitorPass = await client.db('assigment').collection('Records').findOne({ passIdentifier });
+
+    if (!visitorPass) {
+      return res.status(404).json({ error: 'Visitor pass not found' });
+    }
+
+    // Return only the host's contact information to the public
+    const hostContact = {
+      name: visitorPass.hostName,
+      phoneNumber: visitorPass.hostPhoneNumber,
+    };
+
+    return res.status(200).json(hostContact);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 }
 
 run().catch(console.error);
