@@ -319,10 +319,10 @@ async function run() {
  * @swagger
  * /issuePass:
  *   post:
- *     summary: Issue visitor pass by Host
- *     description: Issue a visitor pass and add visitor information to Records
+ *     summary: Issue a visitor pass
+ *     description: Issue a visitor pass with required details
  *     tags:
- *       - Host
+ *       - Visitor
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -341,14 +341,22 @@ async function run() {
  *               - newPhoneNumber
  *     responses:
  *       '200':
- *         description: Visitor pass issued successfully. PassIdentifier generated for the pass.
+ *         description: Visitor pass issued successfully
  *         content:
- *           text/plain:
+ *           application/json:
  *             schema:
- *               type: string
- *               example: "Visitor pass issued successfully. PassIdentifier: abc123"
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 passIdentifier:
+ *                   type: string
+ *                 recordID:
+ *                   type: string
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
+ *       '500':
+ *         description: Failed to issue visitor pass or internal server error
  */
   app.post('/issuePass', verifyToken, async (req, res) => {
     try {
@@ -363,7 +371,7 @@ async function run() {
       const passIssueResult = await issueVisitorPass(data, newName, newPhoneNumber, client);
   
       if (passIssueResult.success) {
-        return res.status(200).json({ message: 'Visitor pass issued successfully', passIdentifier: passIssueResult.passIdentifier });
+        return res.status(200).json({ message: 'Visitor pass issued successfully', passIdentifier: passIssueResult.passIdentifier, recordID: passIssueResult.recordID });
       } else {
         return res.status(500).json({ error: 'Failed to issue visitor pass' });
       }
@@ -482,6 +490,7 @@ async function login(client, data) {
 // Function to issue a visitor pass
 async function issueVisitorPass(userData, newName, newPhoneNumber, dbClient) {
   const passIdentifier = generatePassIdentifier(); // Implement this function
+  const recordID = generateRecordID(); // Implement this function
 
   const result = await dbClient.db('assigment').collection('Records').insertOne({
     name: newName,
@@ -489,10 +498,11 @@ async function issueVisitorPass(userData, newName, newPhoneNumber, dbClient) {
     hostUsername: userData.username,
     issueDate: new Date(),
     passIdentifier: passIdentifier,
+    recordID: recordID,
   });
 
   if (result.insertedId) {
-    return { success: true, passIdentifier };
+    return { success: true, passIdentifier, recordID };
   } else {
     return { success: false };
   }
@@ -545,7 +555,7 @@ async function register(client, data, mydata) {
       Security: data.username,
       phoneNumber: mydata.phoneNumber,
       role: "Host",
-      records: [],
+      records: [recordID],
     });
 
     const updateResult = await securityCollection.updateOne(
