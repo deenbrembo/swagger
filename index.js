@@ -12,7 +12,7 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'VMS API',
+            title: 'Visitor Management System',
             version: '1.0.0'
         },
         components: {  // Add 'components' section
@@ -287,10 +287,21 @@ async function run() {
  *       '401':
  *         description: Unauthorized - Invalid credentials
  */
-  app.post('/RetrivePass',verifyToken, async (req, res) => {
-    let data = req.body;
-    res.send(await retrievePass(client, data));
-  });
+app.post('/RetrievePass', verifyToken, async (req, res) => {
+  try {
+    const data = req.body;
+
+    // Verify token here (use your verification logic)
+    if (data.role !== 'Security' || !verifyToken(req.headers.authorization)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const result = await retrievePass(client, data);
+    res.status(200).json({ message: result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
   
 
 
@@ -741,33 +752,31 @@ async function issueThePass(client, data) {
 }
 
 
-//Function to login
+//Function to retrieve pass
 async function retrievePass(client, data) {
   const usersCollection = client.db("swagger").collection("Users");
 
-  if (data.role === "Security") {
-    let match = await usersCollection.findOne({ username: data.username });
+  let match = await usersCollection.findOne({ username: data.username });
 
-    if (match) {
-      // Compare the provided password with the stored password
-      const isPasswordMatch = await decryptPassword(data.password, match.password);
+  if (match) {
+    // Compare the provided password with the stored password
+    const isPasswordMatch = await decryptPassword(data.password, match.password);
 
-      if (isPasswordMatch) {
-        console.clear(); // Clear the console
-        const token = generateToken(match);
+    if (isPasswordMatch) {
+      console.clear(); // Clear the console
+      const token = generateToken(match);
 
-        switch (match.role) {
-          case "Visitor":
-            return "Retrieve the pass for Check In and Check Out\n\nPass for " + match.name + ": " + token + "\n";
-          default:
-            return "Role not defined";
-        }
-      } else {
-        return "Wrong password";
+      switch (match.role) {
+        case "Visitor":
+          return "Retrieve the pass for Check In and Check Out\n\nPass for " + match.name + ": " + token + "\n";
+        default:
+          return "Role not defined";
       }
     } else {
-      return "User not found";
+      return "Wrong password";
     }
+  } else {
+    return "User not found";
   }
 }
 
