@@ -373,7 +373,7 @@ async function run() {
 
   /**
  * @swagger
- * /deleteHost:
+ * /deleteHosts:
  *   delete:
  *     summary: Delete a host (Admin role)
  *     description: Delete a host by Admin role using the username
@@ -403,12 +403,12 @@ async function run() {
  *       '500':
  *         description: Internal Server Error
  */
-  app.delete('/deleteHost', verifyToken, async (req, res) => {
+  app.delete('/deleteHosts', verifyToken, async (req, res) => {
     try {
       const data = req.user;
-      const username = req.params.username;
+      const usernameToDelete = req.params.username;
   
-      const deletionResult = await deleteHost(client, { username, role: data.role });
+      const deletionResult = await deleteHost(client, data, usernameToDelete);
   
       if (deletionResult === 'Host deleted successfully') {
         return res.status(200).json({ message: deletionResult });
@@ -705,8 +705,8 @@ async function read(client, data) {
 }
 
 
-//Function to delete host data by Admin
-async function deleteHost(client, data) {
+// Function to delete host data by Admin
+async function deleteHost(client, data, usernameToDelete) {
   if (data.role !== 'Admin') {
     return 'Unauthorized access';
   }
@@ -715,25 +715,26 @@ async function deleteHost(client, data) {
   const securityCollection = client.db('assigment').collection('Security');
 
   // Find the host to be deleted
-  const hostToDelete = await hostCollection.findOne({ username: data.username });
+  const hostToDelete = await hostCollection.findOne({ username: usernameToDelete });
   if (!hostToDelete) {
     return 'Host not found';
   }
 
   // Delete the host document
-  const deleteResult = await hostCollection.deleteOne({ username: data.username });
+  const deleteResult = await hostCollection.deleteOne({ username: usernameToDelete });
   if (deleteResult.deletedCount === 0) {
     return 'Failed to delete host';
   }
 
   // Update references in other collections
   await securityCollection.updateMany(
-    { host: data.username },
-    { $pull: { host: data.username } }
+    { host: usernameToDelete },
+    { $pull: { host: usernameToDelete } }
   );
 
   return 'Host deleted successfully';
 }
+
 
 function generatePassIdentifier() {
   return uuidv4(); // Generates a UUID (e.g., '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed')
