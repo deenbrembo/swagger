@@ -287,9 +287,9 @@ async function run() {
  *       '401':
  *         description: Unauthorized - Invalid credentials
  */
-  app.post('/IssueVisitorPass',verifyToken, async (req, res) => {
+  app.post('/RetrivePass',verifyToken, async (req, res) => {
     let data = req.body;
-    res.send(await issueThePass(client, data));
+    res.send(await retrievePass(client, data));
   });
   
 
