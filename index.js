@@ -369,69 +369,6 @@ async function run() {
   });
 
 
-  
-
- /**
- * @swagger
- * /deleteHost&Security:
- *   delete:
- *     summary: Delete host or security user by Admin
- *     description: Delete a host or security user by their role and username (Admin role required)
- *     tags:
- *       - Admin
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: role
- *         required: true
- *         description: Role of the user to delete (Host/Security)
- *         schema:
- *           type: string
- *       - in: path
- *         name: username
- *         required: true
- *         description: Username of the user to delete
- *         schema:
- *           type: string
- *     responses:
- *       '200':
- *         description: User deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Deletion success message
- *       '401':
- *         description: Unauthorized - Access denied
- *       '404':
- *         description: User not found
- *       '500':
- *         description: Internal Server Error
- */
-
-  app.delete('/deleteHost&Security', verifyToken, async (req, res) => {
-    try {
-      const data = req.user;
-      const { role, username } = req.params;
-  
-      const deletionResult = await deleteUserData(client, data, role, username);
-  
-      if (deletionResult === 'Host deleted successfully' || deletionResult === 'Security user deleted successfully') {
-        return res.status(200).json({ message: deletionResult });
-      } else {
-        return res.status(401).json({ error: deletionResult });
-      }
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
-  
-
   /**
  * @swagger
  * /issuePass:
@@ -539,7 +476,7 @@ app.get('/retrievePass', async (req, res) => {
 
 /**
  * @swagger
- * /visitorPass/{passIdentifier}:
+ * /getHostContact/{VisitorPass}:
  *   get:
  *     summary: Retrieve host contact from visitor pass (Security role)
  *     description: Get the contact number of the host from the visitor pass using passIdentifier
@@ -576,7 +513,7 @@ app.get('/retrievePass', async (req, res) => {
  *         description: Internal Server Error
  */
 
-app.get('/visitorPass/:passIdentifier', verifyToken, async (req, res) => {
+app.get('/getHostContact/{VisitorPass}', verifyToken, async (req, res) => {
   try {
     const data = req.user;
     const passIdentifier = req.params.passIdentifier;
@@ -664,11 +601,11 @@ async function login(client, data) {
 
       switch (match.role) {
         case "Admin":
-          return "You are logged in as Admin\n1) Register Security\n2) Dumb All host Data\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as Admin\n1) Register Security\n2) Dump or Read All Hosts Data\\n\nToken for " + match.name + ": " + token + "\n";
         case "Security":
-          return "You are logged in as Security\n1) register Host\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as Security\n1) register Host\n2) Retrieve Host's PhoneNumber from Visitor Pass\n\nToken for " + match.name + ": " + token + "\n";
         case "Host":
-          return "You are logged in as a Host User\n1) Issue the Pass for Visitor\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as a Host User\n1) Read All Visitor\n2) Issue the Pass for Visitor\n\nToken for " + match.name + ": " + token + "\n";
         default:
           return "Role not defined";
       }
@@ -787,43 +724,9 @@ async function read(client, data) {
 }
 
 
-// Function to delete host or security data by Admin
-async function deleteUserData(client, data, roleToDelete, usernameToDelete) {
-  if (data.role !== 'Admin') {
-    return 'Unauthorized access';
-  }
 
-  const hostCollection = client.db('assigment').collection('Host');
-  const securityCollection = client.db('assigment').collection('Security');
 
-  let deletionResult;
-  let collection;
 
-  // Determine the collection based on the role to delete
-  if (roleToDelete === 'Security') {
-    collection = securityCollection;
-    deletionResult = 'Security user deleted successfully';
-  } else if (roleToDelete === 'Host') {
-    collection = hostCollection;
-    deletionResult = 'Host deleted successfully';
-  } else {
-    return 'Invalid role to delete';
-  }
-
-  // Find the user to be deleted
-  const userToDelete = await collection.findOne({ username: usernameToDelete });
-  if (!userToDelete) {
-    return 'User not found';
-  }
-
-  // Delete the user document
-  const deleteResult = await collection.deleteOne({ username: usernameToDelete });
-  if (deleteResult.deletedCount === 0) {
-    return 'Failed to delete user';
-  }
-
-  return deletionResult;
-}
 
 
 
