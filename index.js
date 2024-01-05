@@ -369,29 +369,56 @@ async function run() {
   });
 
 
+  
+
   /**
  * @swagger
- * /deleteVisitor:
+ * /deleteHost/{username}:
  *   delete:
- *     summary: Delete visitor account
- *     description: Delete a visitor's account
+ *     summary: Delete a host (Admin role)
+ *     description: Delete a host by Admin role using the username
  *     tags:
- *       - Visitor
+ *       - Admin
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         description: Username of the host to delete
+ *         schema:
+ *           type: string
  *     responses:
  *       '200':
- *         description: Visitor account deleted successfully
+ *         description: Host deleted successfully
  *         content:
- *           text/plain:
+ *           application/json:
  *             schema:
- *               type: string
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       '401':
- *         description: Unauthorized - Token is missing or invalid
+ *         description: Unauthorized or host not found
+ *       '500':
+ *         description: Internal Server Error
  */
-  app.delete('/deleteVisitor', verifyToken, async (req, res) => {
-    let data = req.user;
-    res.send(await deleteUser(client, data));
+  app.delete('/hosts/:username', verifyToken, async (req, res) => {
+    try {
+      const data = req.user;
+      const username = req.params.username;
+  
+      const deletionResult = await deleteHost(client, { username, role: data.role });
+  
+      if (deletionResult === 'Host deleted successfully') {
+        return res.status(200).json({ message: deletionResult });
+      } else {
+        return res.status(401).json({ error: deletionResult });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
   });
 
 
@@ -678,31 +705,34 @@ async function read(client, data) {
 }
 
 
-//Function to delete data
+//Function to delete host data by Admin
 async function deleteHost(client, data) {
-  const hostCollection = client.db("assigment").collection("Host");
-  const recordsCollection = client.db("assigment").collection("Records");
-  const securityCollection = client.db("assigment").collection("Security");
-
-  // Delete user document
-  const deleteResult = await hostCollection.deleteOne({ username: data.username });
-  if (deleteResult.deletedCount === 0) {
-    return "User not found";
+  if (data.role !== 'Admin') {
+    return 'Unauthorized access';
   }
 
-  // Update visitors array in other users' documents
-  await hostCollection.updateMany(
-    { Host: data.username },
-    { $pull: { Host: data.username } }
-  );
+  const hostCollection = client.db('assigment').collection('Host');
+  const securityCollection = client.db('assigment').collection('Security');
 
-  // Update visitors array in the Security collection
+  // Find the host to be deleted
+  const hostToDelete = await hostCollection.findOne({ username: data.username });
+  if (!hostToDelete) {
+    return 'Host not found';
+  }
+
+  // Delete the host document
+  const deleteResult = await hostCollection.deleteOne({ username: data.username });
+  if (deleteResult.deletedCount === 0) {
+    return 'Failed to delete host';
+  }
+
+  // Update references in other collections
   await securityCollection.updateMany(
-    { Host: data.username },
-    { $pull: { Host: data.username } }
+    { host: data.username },
+    { $pull: { host: data.username } }
   );
 
-  return "Delete Successful\nBut the records are still in the database";
+  return 'Host deleted successfully';
 }
 
 function generatePassIdentifier() {
