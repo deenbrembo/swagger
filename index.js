@@ -264,8 +264,8 @@ async function run() {
  *     description: Login with security personnel credentials
  *     tags:
  *       - Visitor
- *    security:
- *      - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
