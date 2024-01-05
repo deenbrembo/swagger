@@ -31,6 +31,7 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const saltRounds = 10;
+const { v4: uuidv4 } = require('uuid');
 const uri = "mongodb+srv://deenbrembo:hafizudin202@cluster0.vlncwtu.mongodb.net/";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -313,8 +314,120 @@ async function run() {
     res.send(await deleteUser(client, data));
   });
 
+
+  /**
+ * @swagger
+ * /issuePass:
+ *   post:
+ *     summary: Issue visitor pass by Host
+ *     description: Issue a visitor pass and add visitor information to Records
+ *     tags:
+ *       - Host
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newName:
+ *                 type: string
+ *               newPhoneNumber:
+ *                 type: string
+ *             required:
+ *               - newName
+ *               - newPhoneNumber
+ *     responses:
+ *       '200':
+ *         description: Visitor pass issued successfully. PassIdentifier generated for the pass.
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *               example: "Visitor pass issued successfully. PassIdentifier: abc123"
+ *       '401':
+ *         description: Unauthorized - Token is missing or invalid
+ */
+  app.post('/issuePass', verifyToken, async (req, res) => {
+    try {
+      const data = req.user;
+  
+      if (data.role !== 'Host') {
+        return res.status(401).send('Unauthorized - Host access only');
+      }
+  
+      const { newName, newPhoneNumber } = req.body;
+  
+      // Generate a unique PassIdentifier (e.g., using UUID or any unique identifier method)
+      const passIdentifier = generatePassIdentifier(); // You need to implement this function
+  
+      const result = await client.db('assigment').collection('Records').insertOne({
+        name: newName,
+        phoneNumber: newPhoneNumber,
+        hostUsername: data.username,
+        issueDate: new Date(),
+        passIdentifier: passIdentifier, // Include the PassIdentifier in the record
+      });
+  
+      if (result.insertedCount === 1) {
+        return res.status(200).send('Visitor pass issued successfully. PassIdentifier: ' + passIdentifier);
+      } else {
+        return res.status(500).send('Failed to issue visitor pass');
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send('Internal Server Error');
+    }
+  });
   
  
+  /**
+ * @swagger
+ * /retrievePass:
+ *   get:
+ *     summary: Retrieve visitor pass by PassIdentifier
+ *     description: Retrieve a visitor pass using the PassIdentifier
+ *     tags:
+ *       - Visitor
+ *     parameters:
+ *       - in: query
+ *         name: passIdentifier
+ *         required: true
+ *         description: PassIdentifier for the visitor's pass
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Visitor pass retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VisitorPass'
+ *       '404':
+ *         description: PassIdentifier not found or invalid
+ */
+app.get('/retrievePass', async (req, res) => {
+  try {
+    const passIdentifier = req.query.passIdentifier;
+
+    // Search for the pass using the provided PassIdentifier
+    const pass = await client.db('assigment').collection('Records').findOne({ passIdentifier });
+
+    if (!pass) {
+      return res.status(404).send('PassIdentifier not found or invalid');
+    }
+
+    // Return the pass information if found
+    return res.status(200).json(pass);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Internal Server Error');
+  }
+});
+
+
 }
 
 run().catch(console.error);
@@ -480,7 +593,9 @@ async function deleteUser(client, data) {
   return "Delete Successful\nBut the records are still in the database";
 }
 
-
+function generatePassIdentifier() {
+  return uuidv4(); // Generates a UUID (e.g., '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed')
+}
 
 //to verify JWT Token
 function verifyToken(req, res, next) {
