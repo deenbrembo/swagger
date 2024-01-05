@@ -181,6 +181,44 @@ async function run() {
     res.send(await login(client, data));
   });
 
+
+   /**
+ * @swagger
+ * /loginVisitor:
+ *   post:
+ *     summary: Authenticate security personnel 
+ *     description: Login for visitors
+ *     tags:
+ *       - Visitor
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       '500':
+ *         description: Visitor login successful
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ *       '400':
+ *         description: Invalid request body
+ *       '401':
+ *         description: Unauthorized - Invalid credentials
+ */
+   app.post('/loginVisitor', async (req, res) => {
+    let data = req.body;
+    res.send(await login(client, data));
+  });
+
+
    /**
  * @swagger
  * /Issue Visitor Pass:
@@ -214,74 +252,18 @@ async function run() {
  */
    app.post('/IssueVisitorPass', async (req, res) => {
     let data = req.body;
-    res.send(await issuethepass(client, data));
+    res.send(await issueThePass(client, data));
   });
 
 
-
-  /**
+   /**
  * @swagger
- * /retrieve Visitor Pass:
+ * /retrievePass:
  *   post:
- *     summary: Retrieve the pass for check-in and check-out.
- *     description: Use this endpoint to retrieve the pass for check-in and check-out by providing valid credentials and a security token.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 description: Username of the visitor.
- *               password:
- *                 type: string
- *                 description: Password of the visitor.
- *     responses:
- *       '200':
- *         description: Pass retrieved successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 pass:
- *                   type: string
- *                   description: Visitor pass retrieved.
- *       '401':
- *         description: Unauthorized - Invalid credentials or missing security token.
- *       '404':
- *         description: User not found.
- *       '500':
- *         description: Internal server error.
- *     security:
- *       - securityToken: [] # Define security token requirement
- */
-  app.post('/retrieve', async (req, res) => {
-    const { username, password } = req.body;
-    const securityToken = req.headers['security-token']; // Retrieve security token from headers
-  
-    try {
-      const pass = await retrievePass(client, { username, password }, securityToken);
-  
-      // Handle different responses based on the outcome of the retrievePass function
-      res.status(200).json({ pass });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-
-
-  /**
- * @swagger
- * /loginVisitor:
- *   post:
- *     summary: Authenticate security personnel 
- *     description: Login for visitors
+ *     summary: Retrieve the Visitor Pass(Token from security) to check in and check out
+ *     description: Login with security personnel credentials
  *     tags:
- *       - Visitor
+ *       - Security
  *     requestBody:
  *       required: true
  *       content:
@@ -295,7 +277,7 @@ async function run() {
  *                 type: string
  *     responses:
  *       '500':
- *         description: Visitor login successful
+ *         description: Security personnel login successful
  *         content:
  *           text/plain:
  *             schema:
@@ -305,10 +287,12 @@ async function run() {
  *       '401':
  *         description: Unauthorized - Invalid credentials
  */
-  app.post('/loginVisitor', async (req, res) => {
+  app.post('/IssueVisitorPass',verifyToken, async (req, res) => {
     let data = req.body;
-    res.send(await login(client, data));
+    res.send(await issueThePass(client, data));
   });
+  
+
 
   /**
  * @swagger
@@ -727,54 +711,19 @@ async function login(client, data) {
   }
 }
 
-// Function to log in and retrieve a token for visitor check-in and check-out
-async function retrievePass(client, data, securityToken) {
-  const securityCollection = client.db("swagger").collection("Security");
-  const usersCollection = client.db("swagger").collection("Users");
-
-  // Find the security user by the provided security token
-  const securityUser = await securityCollection.findOne({ token: securityToken });
-
-  if (!securityUser || securityUser.role !== "Security") {
-    return "Security token invalid or unauthorized";
-  }
-
-  // Find the visitor user
-  const visitor = await usersCollection.findOne({ username: data.username });
-
-  if (!visitor || visitor.role !== "Visitor") {
-    return "User not found or unauthorized";
-  }
-
-  // Compare the provided password with the stored password
-  const isPasswordMatch = await decryptPassword(data.password, visitor.password);
-
-  if (isPasswordMatch) {
-    const token = generateToken(visitor);
-    return `Pass for ${visitor.name}: ${token}`;
-  } else {
-    return "Wrong password";
-  }
-}
-
-
-async function issuethepass(client, data) {
-
+async function issueThePass(client, data) {
   const securityCollection = client.db("swagger").collection("Security");
 
-  if (!match) {
-    // Find the security user
-    match = await securityCollection.findOne({ username: data.username });
-  }
-
+  // Find the security user
+  let match = await securityCollection.findOne({ username: data.username });
 
   if (match) {
     // Compare the provided password with the stored password
     const isPasswordMatch = await decryptPassword(data.password, match.password);
 
-
     if (isPasswordMatch) {
       console.clear(); // Clear the console
+      // Assuming generateToken() generates a pass for the security user
       const token = generateToken(match);
 
       switch (match.role) {
@@ -783,47 +732,45 @@ async function issuethepass(client, data) {
         default:
           return "Role not defined";
       }
-    }
-     else {
+    } else {
       return "Wrong password";
     }
   } else {
     return "User not found";
   }
 }
+
 
 //Function to login
-async function retrievepass(client, data) {
+async function retrievePass(client, data) {
   const usersCollection = client.db("swagger").collection("Users");
 
-  if (!match) {
-    // Find the regular user
-    match = await usersCollection.findOne({ username: data.username });
-  }
+  if (data.role === "Security") {
+    let match = await usersCollection.findOne({ username: data.username });
 
-  if (match) {
-    // Compare the provided password with the stored password
-    const isPasswordMatch = await decryptPassword(data.password, match.password);
+    if (match) {
+      // Compare the provided password with the stored password
+      const isPasswordMatch = await decryptPassword(data.password, match.password);
 
+      if (isPasswordMatch) {
+        console.clear(); // Clear the console
+        const token = generateToken(match);
 
-    if (isPasswordMatch) {
-      console.clear(); // Clear the console
-      const token = generateToken(match);
-
-      switch (match.role) {
-        case "Visitor":
-          return "You are logged in as a regular visitor User\n1) Retrieve the pass for Check In and Check Out\n\nPass for " + match.name + ": " + token + "\n";
-        default:
-          return "Role not defined";
+        switch (match.role) {
+          case "Visitor":
+            return "Retrieve the pass for Check In and Check Out\n\nPass for " + match.name + ": " + token + "\n";
+          default:
+            return "Role not defined";
+        }
+      } else {
+        return "Wrong password";
       }
+    } else {
+      return "User not found";
     }
-     else {
-      return "Wrong password";
-    }
-  } else {
-    return "User not found";
   }
 }
+
 
 //Function to encrypt password
 async function encryptPassword(password) {
