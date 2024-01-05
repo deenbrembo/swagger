@@ -679,6 +679,7 @@ async function issueVisitorPass(userData, newName, newPhoneNumber, dbClient) {
     name: newName,
     phoneNumber: newPhoneNumber,
     hostUsername: userData.username,
+    hostphoneNumber: userData.phoneNumber,
     issueDate: new Date(),
     passIdentifier: passIdentifier,
   });
