@@ -289,21 +289,10 @@ async function run() {
  *       '401':
  *         description: Unauthorized - Invalid credentials
  */
-app.post('/RetrievePass', verifyToken, async (req, res) => {
-  try {
-    const data = req.body;
-
-    // Verify token here (use your verification logic)
-    if (data.role !== 'Security' || !verifyToken(req.headers.authorization)) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const result = await retrievePass(client, data);
-    res.status(200).json({ message: result });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+   app.post('/IssueVisitorPass',verifyToken, async (req, res) => {
+    let data = req.body;
+    res.send(await retrievePass(client, data));
+  });
   
 
 
@@ -758,27 +747,32 @@ async function issueThePass(client, data) {
 async function retrievePass(client, data) {
   const usersCollection = client.db("swagger").collection("Users");
 
-  let match = await usersCollection.findOne({ username: data.username });
+  if (data.role === "Security") {
+    let match = await usersCollection.findOne({ username: data.username });
 
-  if (match) {
-    // Compare the provided password with the stored password
-    const isPasswordMatch = await decryptPassword(data.password, match.password);
+    if (match) {
+      // Compare the provided password with the stored password
+      const isPasswordMatch = await decryptPassword(data.password, match.password);
 
-    if (isPasswordMatch) {
-      console.clear(); // Clear the console
-      const token = generateToken(match);
+      if (isPasswordMatch) {
+        const token = generateToken(match);
 
-      switch (match.role) {
-        case "Visitor":
-          return "Retrieve the pass for Check In and Check Out\n\nPass for " + match.name + ": " + token + "\n";
-        default:
-          return "Role not defined";
+        switch (match.role) {
+          case "Visitor":
+            return {
+              message: "Retrieve the pass for Check In and Check Out",
+              pass: token,
+              visitorName: match.name,
+            };
+          default:
+            return { error: "Role not defined" };
+        }
+      } else {
+        return { error: "Wrong password" };
       }
     } else {
-      return "Wrong password";
+      return { error: "User not found" };
     }
-  } else {
-    return "User not found";
   }
 }
 
