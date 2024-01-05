@@ -338,27 +338,32 @@ async function run() {
   });
 
 
-   /**
+
+  /**
  * @swagger
- * /readHosts:
+ * /readHost:
  *   get:
- *     summary: Read Hosts information
- *     description: Retrieve information for a host 
+ *     summary: Dump all host data information (Admin role)
+ *     description: Retrieve information of all hosts by Admin role
  *     tags:
  *       - Admin
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       '500':
- *         description: Hosts information retrieved successfully
+ *       '200':
+ *         description: Host information retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/HostInfo'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Host'
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
+ *       '500':
+ *         description: Internal Server Error
  */
-   app.get('/readHost', verifyToken, async (req, res) => {
+  app.get('/readHost', verifyToken, async (req, res) => {
     let data = req.user;
     res.send(await readHosts(client, data));
   });
@@ -674,8 +679,8 @@ async function read(client, data) {
 
 
 //Function to delete data
-async function deleteUser(client, data) {
-  const hostCollection = client.db("assigment").collection("Users");
+async function deleteHost(client, data) {
+  const hostCollection = client.db("assigment").collection("Host");
   const recordsCollection = client.db("assigment").collection("Records");
   const securityCollection = client.db("assigment").collection("Security");
 
@@ -687,14 +692,14 @@ async function deleteUser(client, data) {
 
   // Update visitors array in other users' documents
   await hostCollection.updateMany(
-    { visitors: data.username },
-    { $pull: { visitors: data.username } }
+    { Host: data.username },
+    { $pull: { Host: data.username } }
   );
 
   // Update visitors array in the Security collection
   await securityCollection.updateMany(
-    { visitors: data.username },
-    { $pull: { visitors: data.username } }
+    { Host: data.username },
+    { $pull: { Host: data.username } }
   );
 
   return "Delete Successful\nBut the records are still in the database";
