@@ -325,13 +325,10 @@ async function run() {
  *     responses:
  *       '500':
  *         description: Visitor information retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/VisitorInfo'
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
  */
+
   app.get('/readVisitor', verifyToken, async (req, res) => {
     let data = req.user;
     res.send(await read(client, data));
@@ -352,17 +349,12 @@ async function run() {
  *     responses:
  *       '200':
  *         description: Host information retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Host'
  *       '401':
  *         description: Unauthorized - Token is missing or invalid
  *       '500':
  *         description: Internal Server Error
  */
+
   app.get('/readHost', verifyToken, async (req, res) => {
     let data = req.user;
     res.send(await readHosts(client, data));
@@ -428,7 +420,7 @@ async function run() {
   });
   
  
-  /**
+ /**
  * @swagger
  * /retrievePass:
  *   get:
@@ -441,18 +433,13 @@ async function run() {
  *         name: passIdentifier
  *         required: true
  *         description: PassIdentifier for the visitor's pass
- *         schema:
- *           type: string
  *     responses:
  *       '200':
  *         description: Visitor pass retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/VisitorPass'
  *       '404':
  *         description: PassIdentifier not found or invalid
  */
+
 app.get('/retrievePass', async (req, res) => {
   try {
     const passIdentifier = req.query.passIdentifier;
@@ -476,7 +463,7 @@ app.get('/retrievePass', async (req, res) => {
 
 /**
  * @swagger
- * /getHostContact/{VisitorPass}:
+ * /visitorPass/{passIdentifier}:
  *   get:
  *     summary: Retrieve host contact from visitor pass (Security role)
  *     description: Get the contact number of the host from the visitor pass using passIdentifier
@@ -513,7 +500,8 @@ app.get('/retrievePass', async (req, res) => {
  *         description: Internal Server Error
  */
 
-app.get('/getHostContact/{VisitorPass}', verifyToken, async (req, res) => {
+
+app.get('/visitorPass/:passIdentifier', verifyToken, async (req, res) => {
   try {
     const data = req.user;
     const passIdentifier = req.params.passIdentifier;
@@ -540,6 +528,167 @@ app.get('/getHostContact/{VisitorPass}', verifyToken, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+/**
+ * @swagger
+ * /Deletehosts/{username}:
+ *   delete:
+ *     summary: Delete host by Security
+ *     description: Delete a host by a security user
+ *     tags:
+ *       - Security
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         description: Username of the host to delete
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Host deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Deletion success message
+ *       '401':
+ *         description: Unauthorized - Access denied
+ *       '404':
+ *         description: Host not found
+ *       '500':
+ *         description: Internal Server Error
+ */
+
+app.delete('/Deletehosts/:username', verifyToken, async (req, res) => {
+  try {
+    const data = req.user;
+    const { username } = req.params;
+
+    const deletionResult = await deleteHostBySecurity(client, data, username);
+
+    if (deletionResult === 'Host deleted successfully') {
+      return res.status(200).json({ message: deletionResult });
+    } else {
+      return res.status(401).json({ error: deletionResult });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+/**
+ * @swagger
+ * /Deletesecurity/{username}:
+ *   delete:
+ *     summary: Delete security by Admin
+ *     description: Delete a security user by an admin
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         description: Username of the security user to delete
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Security user deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Deletion success message
+ *       '401':
+ *         description: Unauthorized - Access denied
+ *       '404':
+ *         description: Security user not found
+ *       '500':
+ *         description: Internal Server Error
+ */
+app.delete('/Deletesecurity/:username', verifyToken, async (req, res) => {
+  try {
+    const data = req.user;
+    const { username } = req.params;
+
+    const deletionResult = await deleteSecurityByAdmin(client, data, username);
+
+    if (deletionResult === 'Security user deleted successfully') {
+      return res.status(200).json({ message: deletionResult });
+    } else {
+      return res.status(401).json({ error: deletionResult });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * @swagger
+ * /registerHostAndDelete:
+ *   post:
+ *     summary: Register a new host and delete it after registration (No token authorization)
+ *     description: Registers a new host and deletes it immediately after successful registration
+ *     tags:
+ *       - Host
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               securityUsername:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *     responses:
+ *       '200':
+ *         description: Host registered and deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Registration and deletion success message
+ *       '400':
+ *         description: Invalid request body
+ */
+
+app.post('/registerHostAndDelete', async (req, res) => {
+  try {
+    const mydata = req.body;
+    const registrationResult = await registerHostAndDelete(client, mydata);
+
+    res.status(200).json({ message: registrationResult });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -601,9 +750,9 @@ async function login(client, data) {
 
       switch (match.role) {
         case "Admin":
-          return "You are logged in as Admin\n1) Register Security\n2) Dump or Read All Hosts Data\\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as Admin\n1) Register Security\n2) Dump or Read All Hosts Data\n3) Delete Security Account\n\nToken for " + match.name + ": " + token + "\n";
         case "Security":
-          return "You are logged in as Security\n1) register Host\n2) Retrieve Host's PhoneNumber from Visitor Pass\n\nToken for " + match.name + ": " + token + "\n";
+          return "You are logged in as Security\n1) register Host\n2) Retrieve Hosts PhoneNumber from Visitor Pass\n3) Delete Host Account\n\nToken for " + match.name + ": " + token + "\n";
         case "Host":
           return "You are logged in as a Host User\n1) Read All Visitor\n2) Issue the Pass for Visitor\n\nToken for " + match.name + ": " + token + "\n";
         default:
@@ -724,9 +873,85 @@ async function read(client, data) {
 }
 
 
+// Function to delete host by Security
+async function deleteHostBySecurity(client, data, usernameToDelete) {
+  if (data.role !== 'Security') {
+    return 'Unauthorized access';
+  }
 
+  const hostCollection = client.db('assigment').collection('Host');
+  const securityCollection = client.db('assigment').collection('Security');
 
+  // Find the host user to be deleted
+  const hostToDelete = await hostCollection.findOne({ username: usernameToDelete });
+  if (!hostToDelete) {
+    return 'Host not found';
+  }
 
+  // Delete the host user document
+  const deleteResult = await hostCollection.deleteOne({ username: usernameToDelete });
+  if (deleteResult.deletedCount === 0) {
+    return 'Failed to delete host';
+  }
+
+  // Update the Security collection to remove the reference to the deleted host
+  await securityCollection.updateMany(
+    { host: usernameToDelete },
+    { $pull: { host: usernameToDelete } }
+  );
+
+  return 'Host deleted successfully';
+}
+
+// Function to delete security by Admin
+async function deleteSecurityByAdmin(client, data, usernameToDelete) {
+  if (data.role !== 'Admin') {
+    return 'Unauthorized access';
+  }
+
+  const securityCollection = client.db('assigment').collection('Security');
+
+  // Find the security user to be deleted
+  const securityToDelete = await securityCollection.findOne({ username: usernameToDelete });
+  if (!securityToDelete) {
+    return 'Security user not found';
+  }
+
+  // Delete the security user document
+  const deleteResult = await securityCollection.deleteOne({ username: usernameToDelete });
+  if (deleteResult.deletedCount === 0) {
+    return 'Failed to delete security user';
+  }
+
+  return 'Security user deleted successfully';
+}
+
+async function registerHostAndDelete(client, mydata) {
+  const hostCollection = client.db("assigment").collection("Test Host");
+
+  const tempHost = await hostCollection.findOne({ username: mydata.username });
+
+  if (tempHost) {
+    return "Username already in use, please enter another username";
+  }
+
+  const result = await hostCollection.insertOne({
+    username: mydata.username,
+    password: await encryptPassword(mydata.password),
+    name: mydata.name,
+    Security: mydata.securityUsername,
+    phoneNumber: mydata.phoneNumber,
+    role: "Host",
+  });
+
+  if (result.insertedId) {
+    // Action after successful registration (e.g., deleting the host)
+    await hostCollection.deleteOne({ _id: result.insertedId });
+    return "Host registered and deleted successfully";
+  }
+
+  return "Failed to register host";
+}
 
 
 
@@ -754,5 +979,4 @@ function verifyToken(req, res, next) {
     next();
   });
 }
-
 
